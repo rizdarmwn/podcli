@@ -7,7 +7,7 @@ DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
 
-def get_podcast_rss(query: str) -> str | None:
+def get_podcast_rss_from_itunes(query: str) -> str | None:
     url = "https://itunes.apple.com/search"
     params = {"term": query, "media": "podcast", "limit": 5}
     response = httpx.get(url, params=params)
@@ -30,15 +30,33 @@ def get_latest_episode_mp3(rss_url: str) -> list[feedparser.FeedParserDict] | No
     return None
 
 
-def download_podcast(url: str, filename: str) -> Path:
-    target_path = DOWNLOAD_DIR / filename
+def get_episodes(feed_url):
+    feed = feedparser.parse(feed_url)
+    episodes = []
+    print(feed.entries)
 
-    with httpx.stream("GET", url, follow_redirects=True) as response:
-        # Raise an error for bad status codes (404, 500, etc.)
-        response.raise_for_status()
+    for entry in feed.entries:
+        # Each entry usually has one 'enclosure' containing the audio link
+        if hasattr(entry, "enclosures") and len(entry.enclosures) > 0:
+            mp3_url = entry.enclosures[0].href
+            episodes.append(
+                {"title": entry.title, "url": mp3_url, "date": entry.published}
+            )
+    return episodes
 
-        with open(target_path, "wb") as f:
-            for chunk in response.iter_bytes(chunk_size=8192):
-                f.write(chunk)
 
-    return target_path
+async def download_episode(url, title):
+    # Sanitize title for filename
+    filename = (
+        "".join(c for c in title if c.isalnum() or c in (" ", "_")).rstrip() + ".mp3"
+    )
+    save_path = DOWNLOAD_DIR / filename
+    save_path.parent.mkdir(exist_ok=True)
+
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        async with client.stream("GET", url) as response:
+            response.raise_for_status()
+            with open(save_path, "wb") as f:
+                async for chunk in response.aiter_bytes():
+                    f.write(chunk)
+    return save_path

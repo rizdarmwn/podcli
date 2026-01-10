@@ -9,5 +9,4 @@ dependencies = [
     "httpx>=0.28.1",
     "just-playback>=0.1.8",
     "sqlalchemy>=2.0.45",
-    "textual>=7.0.1",
 ]

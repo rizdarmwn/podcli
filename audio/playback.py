@@ -21,3 +21,7 @@ def toggle_play():
         playback.pause()
     elif playback.paused:
         playback.resume()
+
+
+def stop():
+    playback.stop()
