@@ -7,6 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "feedparser>=6.0.12",
     "httpx>=0.28.1",
+    "inquirerpy>=0.3.4",
     "just-playback>=0.1.8",
+    "rich>=14.2.0",
     "sqlalchemy>=2.0.45",
+    "typer>=0.21.1",
 ]
