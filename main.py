@@ -6,13 +6,15 @@ from InquirerPy.base.control import Choice
 from rich import print_json
 from rich.console import Console
 
-from podcli import (
-    download_episode,
+from db_operations import (
     get_all_channel_data_from_file,
-    get_all_episodes,
     get_all_episodes_from_channel_from_file,
     get_channel_data,
     get_episode_data_from_file,
+)
+from podcli import (
+    download_episode,
+    get_all_episodes,
     get_latest_episode,
     listen_from_path,
 )
