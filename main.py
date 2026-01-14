@@ -34,7 +34,11 @@ async def main():
                 # feed_url = "https://feeds.captivate.fm/zeroknowledge/"
                 channel_data = get_channel_data(feed_url)
                 latest_episode = get_latest_episode(channel_data["title"], feed_url)
-                get_all_episodes(channel_data["title"], channel_data["rss_url"])
+                with console.status(
+                    "[bold green]Getting all episodes metadata..."
+                ) as status:
+                    get_all_episodes(channel_data["title"], channel_data["rss_url"])
+
                 if latest_episode:
                     await download_episode(
                         latest_episode["url"],
