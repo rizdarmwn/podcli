@@ -55,13 +55,15 @@ async def main():
                     )
             elif choice == "Listen":
                 choices = get_all_channel_data_from_file()
-                channel_data = await inquirer.select(
+                channel_data = await inquirer.fuzzy(
                     message="Which podcast do you want to listen?",
                     choices=["[Go Back]"]
                     + [
                         Choice(value=pickle.loads(v), name=str(key, "utf-8"))
                         for key, v in choices
                     ],
+                    vi_mode=True,
+                    instruction="[Type to search podcast]",
                 ).execute_async()
 
                 if channel_data == "[Go Back]":
@@ -71,7 +73,7 @@ async def main():
                     channel_data["title"]
                 )
 
-                choice = await inquirer.select(
+                choice = await inquirer.fuzzy(
                     message="Which episode?",
                     choices=["[Go Back]"]
                     + [
@@ -81,6 +83,8 @@ async def main():
                         )
                         for k, v in episodes.items()
                     ],
+                    vi_mode=True,
+                    instruction="[Type to search episode]",
                 ).execute_async()
 
                 if choice == "[Go Back]":
