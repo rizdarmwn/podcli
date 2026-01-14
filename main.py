@@ -3,7 +3,6 @@ import pickle
 
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
-from rich import print_json
 from rich.console import Console
 
 from db_operations import (
@@ -31,9 +30,12 @@ async def main():
         if choice:
             if choice == "Add":
                 feed_url = await inquirer.text(
-                    message="Enter the URL (RSS feeds only):"
+                    message="Enter the URL (RSS feeds only):",
+                    instruction="[Leave empty if you want to cancel]",
                 ).execute_async()
                 # feed_url = "https://feeds.captivate.fm/zeroknowledge/"
+                if feed_url == "":
+                    continue
                 channel_data = get_channel_data(feed_url)
                 latest_episode = get_latest_episode(channel_data["title"], feed_url)
                 with console.status(

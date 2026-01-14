@@ -89,7 +89,7 @@ async def listen_from_path(path):
     print(
         "Press [Space] to Pause, [Q] to Quit, [Right Arrow] to skip +30s, [Left Arrow] to reverse -30s"
     )
-    with Live(get_player_ui(), refresh_per_second=10) as live:
+    with Live(get_player_ui(), refresh_per_second=5) as live:
         ui_task = asyncio.create_task(update_ui(live))
         try:
             await session.prompt_async(message="")
@@ -166,4 +166,5 @@ async def download_episode(url: str, title: str, id: str, channel_name: str):
                         progress.update(task_id, advance=len(chunk))
 
     update_episode_path_to_file(channel_name, id, save_path)
+    print(save_path)
     return save_path
