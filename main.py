@@ -33,7 +33,6 @@ async def main():
                     message="Enter the URL (RSS feeds only):",
                     instruction="[Leave empty if you want to cancel]",
                 ).execute_async()
-                # feed_url = "https://feeds.captivate.fm/zeroknowledge/"
                 if feed_url == "":
                     continue
                 channel_data = get_channel_data(feed_url)
