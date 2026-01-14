@@ -19,7 +19,7 @@ async def main():
     while True:
         choice = await inquirer.select(
             message="Do you want listen or add more to your library?",
-            choices=["Listen", "Add", Choice(value=None, name="Exit")],
+            choices=["Listen", "Add", "Exit"],
             default="Listen",
         ).execute_async()
         if choice:
@@ -41,7 +41,7 @@ async def main():
                     )
             elif choice == "Listen":
                 console.print("WIP")
-                listen_from_path(
+                await listen_from_path(
                     "downloads/Zero Knowledge/Year in Review ZK Podcast in 2025  Beyond.mp3"
                 )
             else:
