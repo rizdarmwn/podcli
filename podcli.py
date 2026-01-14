@@ -166,5 +166,4 @@ async def download_episode(url: str, title: str, id: str, channel_name: str):
                         progress.update(task_id, advance=len(chunk))
 
     update_episode_path_to_file(channel_name, id, save_path)
-    print(save_path)
     return save_path
