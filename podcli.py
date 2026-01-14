@@ -1,5 +1,6 @@
 import asyncio
-import signal
+import dbm
+import pickle
 from pathlib import Path
 
 import feedparser
@@ -7,6 +8,7 @@ import httpx
 import just_playback
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import PromptSession
+from rich import print_json
 from rich.columns import Columns
 from rich.console import Console, Group
 from rich.live import Live
@@ -95,30 +97,68 @@ async def listen_from_path(path):
             pb.stop()
 
 
-def get_podcast_rss_from_itunes(query: str) -> str | None:
-    url = "https://itunes.apple.com/search"
-    params = {"term": query, "media": "podcast", "limit": 5}
-    response = httpx.get(url, params=params)
-    try:
-        json_response = response.json()
-        if json_response["resultCount"] > 0:
-            return json_response["results"][0]["feedUrl"]
-    except Exception:
-        return response.text
-    return None
-
-
 def get_channel_data(rss_url: str):
     d = feedparser.parse(rss_url)
-
-    return {
+    data = {
         "title": d.feed.title,
         "link": d.feed.link,
         "description": d.feed.description,
+        "rss_url": rss_url,
     }
+    save_channel_data_to_file(data)
+    return data
 
 
-def get_latest_episode(rss_url: str):
+def get_all_channel_data_from_file():
+    db = dbm.open("channeldb", "r")
+    return db.items()
+
+
+def get_channel_data_from_file(key):
+    db = dbm.open("channeldb", "r")
+    return pickle.loads(db[key])
+
+
+def get_episode_data_from_file(channel_title, key):
+    db = dbm.open("episodedb", "r")
+    episodes = pickle.loads(db[channel_title])
+    return episodes[key]
+
+
+def get_all_episodes_from_channel_from_file(channel_title):
+    db = dbm.open("episodedb", "r")
+    episodes = pickle.loads(db[channel_title])
+    return dict(
+        sorted(episodes.items(), key=lambda x: x[1]["date_parsed"], reverse=True)
+    )
+
+
+def save_channel_data_to_file(data):
+    db = dbm.open("channeldb", "c")
+    db[data["title"]] = pickle.dumps(data)
+    db.close()
+
+
+def save_episode_data_to_file(key, data):
+    db = dbm.open("episodedb", "c")
+    if key in db:
+        episodes = pickle.loads(db[key])
+        if data["id"] not in episodes:
+            db[key] = pickle.dumps({**episodes, data["id"]: data})
+    else:
+        db[key] = pickle.dumps({data["id"]: data})
+    db.close()
+
+
+def update_episode_path_to_file(key, episode_id, path):
+    db = dbm.open("episodedb", "c")
+    data = pickle.loads(db[key])
+    data[episode_id]["path"] = path
+    db[key] = pickle.dumps(data)
+    db.close()
+
+
+def get_latest_episode(channel_name: str, rss_url: str):
     d = feedparser.parse(rss_url)
     latest_episode = d.entries[0]
 
@@ -131,36 +171,37 @@ def get_latest_episode(rss_url: str):
             "link": latest_episode.link,
             "description": latest_episode.description,
             "id": latest_episode.id,
+            "date_parsed": latest_episode.published_parsed,
         }
+        save_episode_data_to_file(channel_name, episode)
         return episode
     return None
 
 
-def get_all_episodes(rss_url):
+def get_all_episodes(channel_name, rss_url):
     d = feedparser.parse(rss_url)
     episodes = []
 
     for entry in d.entries:
         if hasattr(entry, "enclosures") and len(entry.enclosures) > 0:
             mp3_url = entry.enclosures[0].href
-            episodes.append(
-                {
-                    "title": entry.title,
-                    "url": mp3_url,
-                    "date": entry.published,
-                    "duration": entry.enclosures[0].length,
-                    "link": entry.link,
-                    "description": entry.description,
-                    "id": entry.id,
-                }
-            )
+            episode = {
+                "title": entry.title,
+                "url": mp3_url,
+                "date": entry.published,
+                "duration": entry.enclosures[0].length,
+                "link": entry.link,
+                "description": entry.description,
+                "id": entry.id,
+                "date_parsed": entry.published_parsed,
+            }
+            episodes.append(episode)
+            save_episode_data_to_file(channel_name, episode)
     return episodes
 
 
-async def download_episode(url: str, title: str, channel_name: str):
-    filename = (
-        "".join(c for c in title if c.isalnum() or c in (" ", "_")).rstrip() + ".mp3"
-    )
+async def download_episode(url: str, title: str, id: str, channel_name: str):
+    filename = id + ".mp3"
     save_path = DOWNLOAD_DIR / channel_name / filename
     save_path.parent.mkdir(exist_ok=True)
     with Progress(
@@ -183,3 +224,6 @@ async def download_episode(url: str, title: str, channel_name: str):
                     async for chunk in response.aiter_bytes():
                         f.write(chunk)
                         progress.update(task_id, advance=len(chunk))
+
+    update_episode_path_to_file(channel_name, id, save_path)
+    return save_path
